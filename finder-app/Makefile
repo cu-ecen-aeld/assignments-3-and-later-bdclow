@@ -7,9 +7,9 @@ else
 endif
 CFLAGS = -Wall
 
-default: finder-app/writer
-	$(CC) $(CFLAGS) -o finder-app/writer finder-app/writer.c
+default:
+	$(CC) $(CFLAGS) -o writer writer.c
 
 clean:
-	rm finder-app/writer
-	rm finder-app/*.o || true
+	rm writer
+	rm *.o || true
