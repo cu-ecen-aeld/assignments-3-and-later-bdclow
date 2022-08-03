@@ -1,7 +1,15 @@
-CC:=gcc
+ifndef CROSS_COMPILE
+ CC:=gcc
+else
+ ifeq ($(CROSS_COMPILE),aarch64-none-linux-gnu-)
+ CC:=aarch64-none-linux-gnu-gcc
+ endif
+endif
+CFLAGS = -Wall
 
-build: finder-app/writer.o
-	$(CC) -o finder-app/writer.o finder-app/writer.c
+default: finder-app/writer
+	$(CC) $(CFLAGS) -o finder-app/writer finder-app/writer.c
 
 clean:
-	rm finder-app/writer.o
+	rm finder-app/writer
+	@rm finder-app/*.o || true
