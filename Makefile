@@ -12,4 +12,4 @@ default: finder-app/writer
 
 clean:
 	rm finder-app/writer
-	@rm finder-app/*.o || true
+	rm finder-app/*.o || true
