@@ -1,4 +1,10 @@
 #include "systemcalls.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -16,7 +22,21 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    // If cmd null pointer return false
+    if (cmd == NULL) {
+        return false;
+    }
 
+    // run command, get result
+    int res;
+    res = system(cmd);
+    
+    // if not zero, failed, return false
+    if (res != 0) {
+        return false;
+    }
+
+    // else true
     return true;
 }
 
@@ -40,6 +60,7 @@ bool do_exec(int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -58,6 +79,14 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    pid_t pid;
+    pid = fork();
+    if (pid < 0) {
+        return false;
+    }
+    if (execv(command[0], command) < 0) {
+        return false;
+    }
 
     va_end(args);
 
@@ -92,6 +121,27 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    pid_t pid;
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    
+    if (fd < 0) {
+        return false;
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        return false;
+    } else {
+        // Duplicate file descriptor, stdout -> redirect file
+        if (dup2(fd, 1) < 0) {
+            return false;
+        }
+        // Close original fd
+        close(fd);
+        if (execv(command[0], command) < 0) {
+            return false;
+        }
+    }
 
     va_end(args);
 
