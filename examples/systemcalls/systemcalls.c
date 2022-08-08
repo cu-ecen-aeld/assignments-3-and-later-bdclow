@@ -61,10 +61,13 @@ bool do_exec(int count, ...)
     char * command[count+1];
     int i;
 
+    printf("\n1:\nRUNNING COMMAND:");
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
+        printf(" %s ", command[i]);
     }
+    printf("\n");
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
@@ -78,26 +81,30 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+
     pid_t pid;
-    int status;
+    int status = 0;
 
     pid = fork();
-    if (pid < 0) {
+    if (pid == 0) {
+        // child
+        if (execv(command[0], command) == -1) {
+            printf("command: %s", command[0]);
+            perror("execv");
+            exit(99);
+        }
+    } else if (pid == -1){
+        // error
         perror("fork");
         return false;
-    }
-    
-    status = execv(command[0], command);
-    if (status < 0) {
-        perror("execv");
-        return false;
-    }
-
-    wait(&status);
-    if (WIFEXITED(status)) {
-        if (WEXITSTATUS(status) != 0) {
-            va_end(args);
-            return false;
+    } else {
+        // child
+        wait(&status);
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status) != 0) {
+                va_end(args);
+                return false;
+            }
         }
     }
 
@@ -117,10 +124,13 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    printf("\n2:\nRUNNING COMMAND:");
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
+        printf(" %s ", command[i]);
     }
+    printf("\n");
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
@@ -133,8 +143,9 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    printf("\n3:\nRUNNING COMMAND: %s\n", command[0]);
     pid_t pid;
-    int status;
+    int status = 0;
 
     int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
     
@@ -143,22 +154,26 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     }
 
     pid = fork();
-    if (pid < 0) {
-        perror("fork");
-        return false;
-    } else {
+    if (pid == 0) {
+        // child
+        //
         // Duplicate file descriptor, stdout -> redirect file
         if (dup2(fd, 1) < 0) {
+            perror("dup2");
             return false;
         }
-        // Close original fd
-        close(fd);
         status = execv(command[0], command);
         if (status < 0) {
+            printf("command: %s", command[0]);
             perror("execv");
             return false;
         }
-
+    } else if (pid == -1){
+        // error
+        perror("fork");
+        return false;
+    } else {
+        // child
         wait(&status);
         if (WIFEXITED(status)) {
             if (WEXITSTATUS(status) != 0) {
