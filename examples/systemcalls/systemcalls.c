@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <wait.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -78,12 +79,26 @@ bool do_exec(int count, ...)
  *
 */
     pid_t pid;
+    int status;
+
     pid = fork();
     if (pid < 0) {
+        perror("fork");
         return false;
     }
-    if (execv(command[0], command) < 0) {
+    
+    status = execv(command[0], command);
+    if (status < 0) {
+        perror("execv");
         return false;
+    }
+
+    wait(&status);
+    if (WIFEXITED(status)) {
+        if (WEXITSTATUS(status) != 0) {
+            va_end(args);
+            return false;
+        }
     }
 
     va_end(args);
@@ -119,6 +134,8 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *
 */
     pid_t pid;
+    int status;
+
     int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
     
     if (fd < 0) {
@@ -127,6 +144,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
     pid = fork();
     if (pid < 0) {
+        perror("fork");
         return false;
     } else {
         // Duplicate file descriptor, stdout -> redirect file
@@ -135,8 +153,18 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         }
         // Close original fd
         close(fd);
-        if (execv(command[0], command) < 0) {
+        status = execv(command[0], command);
+        if (status < 0) {
+            perror("execv");
             return false;
+        }
+
+        wait(&status);
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status) != 0) {
+                va_end(args);
+                return false;
+            }
         }
     }
 
